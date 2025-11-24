@@ -35,8 +35,9 @@ jobs:
       - name: Checkout (optional)
         uses: actions/checkout@v4
 
-      - name: Docker login to Huawei SWR
-        run: echo "${{ secrets.HUAWEI_SWR_PASSWORD }}" | docker login -u "${{ secrets.HUAWEI_SWR_USERNAME }}" "swr.${{ env.REGION }}.myhuaweicloud.com" --password-stdin
+      - name: Login to Huawei SWR
+        run: |
+          echo "${{ secrets.HUAWEI_SWR_PASSWORD }}" | docker login -u "${{ secrets.HUAWEI_SWR_USERNAME }}" "swr.${{ inputs.region }}.myhuaweicloud.com" --password-stdin
 
       - name: Run Trivy TABLE Scan
         id: trivy
