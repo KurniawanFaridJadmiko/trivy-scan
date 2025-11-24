@@ -3,15 +3,15 @@ name: Reusable Trivy Scan
 on:
   workflow_call:
     inputs:
-      IMAGE:
+      image:
         description: "Full Docker image reference"
         required: true
         type: string
-      IMAGE_NAME:
+      image_name:
         description: "Application name (for report labeling)"
         required: true
         type: string
-      REGION:
+      region:
         description: "Huawei Cloud region for SWR login"
         required: true
         type: string
