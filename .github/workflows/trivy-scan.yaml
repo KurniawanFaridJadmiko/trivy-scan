@@ -1,0 +1,98 @@
+name: Reusable Trivy Scan
+
+on:
+  workflow_call:
+    inputs:
+      image_ref:
+        description: "Full Docker image reference"
+        required: true
+        type: string
+      app_name:
+        description: "Application name (for report labeling)"
+        required: true
+        type: string
+    secrets:
+      TELEGRAM_BOT_TOKEN_SECURITY:
+        required: true
+      TELEGRAM_CHAT_ID_SECURITY:
+        required: true
+      TELEGRAM_TOPIC_ID_SECURITY:
+        required: true
+
+jobs:
+  trivy_scan:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout (optional)
+        uses: actions/checkout@v4
+
+      - name: Run Trivy TABLE Scan
+        id: trivy
+        uses: aquasecurity/trivy-action@0.32.0
+        with:
+          image-ref: ${{ inputs.image_ref }}
+          format: table
+          output: trivy-result.txt
+          severity: HIGH,CRITICAL,MEDIUM,LOW
+
+      - name: Count Vulnerabilities
+        id: vulns
+        run: |
+          echo "HIGH=$(grep -c 'HIGH' trivy-result.txt || true)" >> $GITHUB_OUTPUT
+          echo "CRITICAL=$(grep -c 'CRITICAL' trivy-result.txt || true)" >> $GITHUB_OUTPUT
+          echo "MEDIUM=$(grep -c 'MEDIUM' trivy-result.txt || true)" >> $GITHUB_OUTPUT
+          echo "LOW=$(grep -c 'LOW' trivy-result.txt || true)" >> $GITHUB_OUTPUT
+
+      - name: Generate dynamic filename
+        id: filename
+        run: |
+          FILE="trivy-report-${{ inputs.app_name }}-$(date +'%Y-%m-%d-%H-%M').txt"
+          mv trivy-result.txt "$FILE"
+          echo "FILE=$FILE" >> $GITHUB_OUTPUT
+
+      - name: Upload Trivy Report Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: trivy-report-${{ inputs.app_name }}
+          path: ${{ steps.filename.outputs.FILE }}
+
+      - name: Send Telegram Notification
+        env:
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN_SECURITY }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID_SECURITY }}
+          TELEGRAM_TOPIC_ID: ${{ secrets.TELEGRAM_TOPIC_ID_SECURITY }}
+
+          IMAGE: ${{ inputs.image_ref }}
+          APP: ${{ inputs.app_name }}
+          HIGH: ${{ steps.vulns.outputs.HIGH }}
+          CRITICAL: ${{ steps.vulns.outputs.CRITICAL }}
+          MEDIUM: ${{ steps.vulns.outputs.MEDIUM }}
+          LOW: ${{ steps.vulns.outputs.LOW }}
+          REPO: ${{ github.repository }}
+          RUN_ID: ${{ github.run_id }}
+          PUSHER: ${{ github.actor }}
+        run: |
+          ARTIFACT_URL="https://github.com/${REPO}/actions/runs/${RUN_ID}"
+
+          MESSAGE=$(cat <<EOF
+          🔐 *Trivy Scan Completed - ${APP}*
+
+          👤 *Pushed by:* ${PUSHER}
+          🖼️ *Image:* \`${IMAGE}\`
+
+          *Severity Summary:*
+          🔥 *CRITICAL:* ${CRITICAL}
+          ⚠️ *HIGH:* ${HIGH}
+          ⚡ *MEDIUM:* ${MEDIUM}
+          📘 *LOW:* ${LOW}
+
+          📄 *Artifact/Result:* [Download Report](${ARTIFACT_URL})
+          EOF
+          )
+
+          curl -s -X POST https://api.telegram.org/bot$TELEGRAM_BOT_TOKEN/sendMessage \
+            -d chat_id="$TELEGRAM_CHAT_ID" \
+            -d message_thread_id="${TELEGRAM_TOPIC_ID} \
+            -d text="$MESSAGE" \
+            -d parse_mode=Markdown
