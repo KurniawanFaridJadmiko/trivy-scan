@@ -37,7 +37,7 @@ jobs:
 
       - name: Login to Huawei SWR
         run: |
-          echo "${{ secrets.HUAWEI_SWR_PASSWORD }}" | docker login -u "${{ secrets.HUAWEI_SWR_USERNAME }}" "swr.${{ inputs.region }}.myhuaweicloud.com" --password-stdin
+          echo "${{ secrets.HUAWEI_SWR_PASSWORD }}" | docker login -u "${{ secrets.HUAWEI_SWR_USERNAME }}" "swr.${{ inputs.REGION }}.myhuaweicloud.com" --password-stdin
 
       - name: Run Trivy TABLE Scan
         id: trivy
