@@ -11,6 +11,10 @@ on:
         description: "Application name (for report labeling)"
         required: true
         type: string
+      REGION:
+        description: "Huawei Cloud region for SWR login"
+        required: true
+        type: string
     secrets:
       TELEGRAM_BOT_TOKEN_SECURITY:
         required: true
