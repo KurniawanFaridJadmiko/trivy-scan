@@ -18,6 +18,10 @@ on:
         required: true
       TELEGRAM_TOPIC_ID_SECURITY:
         required: true
+      HUAWEI_SWR_PASSWORD:
+        required: true
+      HUAWEI_SWR_USERNAME:
+        required: true
 
 jobs:
   trivy_scan:
@@ -26,6 +30,9 @@ jobs:
     steps:
       - name: Checkout (optional)
         uses: actions/checkout@v4
+
+      - name: Docker login to Huawei SWR
+        run: echo "${{ secrets.HUAWEI_SWR_PASSWORD }}" | docker login -u "${{ secrets.HUAWEI_SWR_USERNAME }}" "swr.${{ env.REGION }}.myhuaweicloud.com" --password-stdin
 
       - name: Run Trivy TABLE Scan
         id: trivy
